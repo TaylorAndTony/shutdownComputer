@@ -151,16 +151,46 @@ def start_server() -> None:
 
 
 def kick_start_server() -> None:
+    """
+    # Start the server automatically, the entance of typing 1
+    Besides kick start the server, this func will also
+    delete all the histories of connected clients.
+    """
+    print()
+    print('   清空客户端连接历史记录')
+    print('   请确认删除')
+    print('   在完成客户端记录后，请按下 Ctrl + C 手动停止该服务器')
+    print('   若无反应，可在按下快捷键后回车。')
+    print('   随后再次打开该程序进行其他操作。')
+
+    os.system('del online_devices\*')
     t = threading.Thread(target=start_server)
     t.setDaemon(True)
     t.start()
     print('服务器已做为子线程启动')
 
+# -------------------------------------------
+#  Send commands to client
+# -------------------------------------------
 
-def send_command_to_client() -> None:
-    """Send cmd command to several clients which can be chosen"""
-    pass
 
+def send_commands_to_a_client(cmds:list) -> None:
+    """Send a single cmd command to a client"""
+    with open('server.json', 'r', encoding='utf-8') as f:
+        logs = json.load(f)
+    ip = logs['ip']
+    port = logs['cmd_port']
+    data = {
+        "mode": "exec-command",
+        "cmdList": cmds
+    }
+    send_json(ip, port, data)
+
+
+
+# -------------------------------------------
+#  main prog
+# -------------------------------------------
 
 def main() -> None:
     """# the entrance of this program"""
@@ -178,8 +208,7 @@ def main() -> None:
         elif mode == '1':
             kick_start_server()
         elif mode == '2':
-            send_command_to_client()
-
+            send_commands_to_a_client(['calc'])
 
 if __name__ == "__main__":
     main()

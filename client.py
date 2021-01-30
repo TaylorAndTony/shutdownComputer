@@ -106,7 +106,7 @@ def send_auto_data_until_success():
             send_json(ip, port, data)
             connected = True
         except ConnectionRefusedError:
-            print('server not fond, waiting')
+            print('> 主动模式：未发现服务器，等待中...')
             time.sleep(3)
 
 # -------------------------------------------
@@ -122,17 +122,26 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         self.data = self.request.recv(1024).strip()
         # ip
         self.come_ip = self.client_address[0]
-        print("{} 希望向此客户端发送数据".format(self.come_ip))
+        print("> 内置服务器：{} 希望向此客户端发送数据".format(self.come_ip))
         # decoded receved msg
         self.content = str(self.data, 'utf-8')
         self.content = self.content.replace("'", '"')
         # this `ready` is the json data transmitted from client
         ready = json.loads(self.content)
-        self.process_json(ready)
+        self.analyse_json_and_exec_cmds(ready)
     
-    def process_json(self, json_thing):
+    def analyse_json_and_exec_cmds(self, json_thing):
+        """
+        response to the json sent by server,
+        analyse its structure and execute
+        the commands one by one in it.
+        """
         cmds = json_thing['cmdList']
         pp(cmds)
+        for cmd in cmds:
+            print('> 内置服务器：执行命令 {}'.format(cmd))
+            os.system(cmd)
+
 
 
 def start_server() -> None:
@@ -146,7 +155,7 @@ def start_server() -> None:
     PORT = a['cmd_port']
     IP = a['ip']
     server = socketserver.TCPServer((IP, PORT), MyTCPHandler)
-    print('监听服务端发送命令的子服务器一启动：', IP, PORT)
+    print('监听服务端发送命令的子服务器已启动：', IP, PORT)
     server.serve_forever()
 
 
