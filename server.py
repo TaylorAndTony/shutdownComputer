@@ -5,6 +5,8 @@ import os
 import time
 import threading
 from pprint import pprint, pp
+from tkinter import *
+from tkinter import ttk
 
 
 # -------------------------------------------
@@ -95,13 +97,6 @@ def construct_cmd_data(cmd=[]) -> dict:
     return data
 
 
-def let_client_exec_cmd(client_ip, cmd):
-    with open('server.json', 'r') as f:
-        a = json.load(f)
-    CMDPORT = a['cmd_port']
-    data = construct_cmd_data(cmd)
-    send_json(client_ip, CMDPORT, data)
-
 # -------------------------------------------
 #  useful commands
 # -------------------------------------------
@@ -174,18 +169,133 @@ def kick_start_server() -> None:
 # -------------------------------------------
 
 
-def send_commands_to_a_client(cmds:list) -> None:
-    """Send a single cmd command to a client"""
-    with open('server.json', 'r', encoding='utf-8') as f:
-        logs = json.load(f)
-    ip = logs['ip']
-    port = logs['cmd_port']
-    data = {
-        "mode": "exec-command",
-        "cmdList": cmds
-    }
-    send_json(ip, port, data)
+def let_client_exec_cmd(client_ip: str, cmd: str):
+    """ let a single client execute cmds """
+    with open('server.json', 'r') as f:
+        a = json.load(f)
+    CMDPORT = a['cmd_port']
+    data = construct_cmd_data(cmd)
+    send_json(client_ip, CMDPORT, data)
 
+
+def let_multiple_client_exec_cmd(clientIPs: list, cmd: str):
+    for each_client in clientIPs:
+        print('当前执行命令的客户端 IP ：{}'.format(each_client))
+        let_client_exec_cmd(each_client, cmd)
+
+
+# -------------------------------------------
+#  GUI here!
+# -------------------------------------------
+
+
+class GUI:
+    def __init__(self):
+        self.root = Tk()
+        self.pad = {'padx': 10, 'pady': 10}
+        # 界面分两部分，上面的控制按钮和下面的列表
+        self.upper_frame = Frame(self.root)
+        self.bottom_frame = Frame(self.root)
+
+    def layout_buttons(self):
+        ttk.Button(self.upper_frame,
+                   text='监听客户端',
+                   command=self.button_start_listenning
+                   ).grid(row=0, column=0, **self.pad)
+
+        ttk.Button(self.upper_frame,
+                   text='刷新列表',
+                   command=self.button_refresh_list
+                   ).grid(row=0, column=1, **self.pad)
+
+        ttk.Button(self.upper_frame,
+                   text='发送命令',
+                   command=self.button_send_command
+                   ).grid(row=0, column=2, **self.pad)
+
+    def layout_tree(self):
+        # 鼠标点击后插入的索引，十六进制的内个，列表中的顺序
+        # 使用一个字典，如果点击了偶数次，则视为取消，用于意外处理
+        self.selected_client_index = {}
+        # 用于插入数据时的左侧唯一编号，自增，该变量插入进 Tree
+        self.defenite_id = 0
+        # 最终选择的客户端
+        self.finally_selected_client = []
+        # 定义中心列表区域
+        self.tree = ttk.Treeview(
+            self.bottom_frame, show="headings", height=8, columns=("a", "b", "c", "d"))
+        self.vbar = ttk.Scrollbar(
+            self.bottom_frame, orient=VERTICAL, command=self.tree.yview)
+        # 定义树形结构与滚动条
+        self.tree.configure(yscrollcommand=self.vbar.set)
+        # 表格的标题
+        self.tree.column("a", width=80, anchor="center")
+        self.tree.column("b", width=160, anchor="center")
+        self.tree.column("c", width=160, anchor="center")
+        self.tree.column("d", width=160, anchor="center")
+        # 用这个顺序编号来判断哪些客户端需要执行命令！
+        self.tree.heading("a", text="顺序编号")
+        self.tree.heading("b", text="客户端 IP")
+        self.tree.heading("c", text="连接时间")
+        self.tree.heading("d", text="处理器信息")
+        # 调用方法获取表格内容插入及树基本属性设置
+        self.tree["selectmode"] = "browse"
+        self.tree.grid(row=0, column=0, sticky=NSEW, ipadx=10)
+        self.vbar.grid(row=0, column=1, sticky=NS)
+        self.tree.bind("<ButtonRelease-1>", self.tree_item_click)
+        # testing purposes
+        self.tree_insert_value('127.0.0.1', '2021-1-31', 'intel core i7')
+        self.tree_insert_value('127.0.0.1', '2021-1-31', 'intel core i7')
+        self.tree_insert_value('127.0.0.1', '2021-1-31', 'intel core i7')
+        self.tree_insert_value('127.0.0.1', '2021-1-31', 'intel core i7')
+
+    def tree_insert_value(self, clientIP, connectTime, CPU):
+        """ 插入列表的基本方法 """
+        self.defenite_id += 1
+        self.tree.insert("", "end", values=(
+            self.defenite_id,
+            clientIP,
+            connectTime,
+            CPU
+        ))
+
+    def tree_item_click(self, event):
+        """
+        当列表某一项被点击时的回调函数，自动处理偶数次点击
+        """
+        selection = self.tree.selection()[0]
+        hexx = str(selection[1:])
+        num = int(hexx, 16)
+        self.selected_client_index[num] = self.selected_client_index.get(num, 0) + 1
+        self.tree_process_selected()
+
+    def tree_process_selected(self):
+        """
+        在选择客户端时，可视化呈现哪些客户端被选择了
+        同时记录进 self.finally_selected_client 列表
+        用于发送命令
+        """
+        self.finally_selected_client = []
+        for k, v in self.selected_client_index.items():
+            if v % 2 != 0:
+                self.finally_selected_client.append(k)
+        print(self.finally_selected_client)
+
+    def button_start_listenning(self):
+        pass
+
+    def button_refresh_list(self):
+        pass
+
+    def button_send_command(self):
+        pass
+
+    def run(self):
+        self.layout_buttons()
+        self.layout_tree()
+        self.upper_frame.pack(**self.pad)
+        self.bottom_frame.pack(**self.pad)
+        self.root.mainloop()
 
 
 # -------------------------------------------
@@ -204,11 +314,18 @@ def main() -> None:
         if mode not in {'1', '2', '0'}:
             continue
         elif mode == '0':
-            let_client_exec_cmd('127.0.0.1', ['calc'])              # <- testing method
+            let_client_exec_cmd('127.0.0.1', ['calc'])     # <- testing method
         elif mode == '1':
             kick_start_server()
         elif mode == '2':
-            send_commands_to_a_client(['calc'])
+            # need to be developed
+            pass
+
+
+def GUImain():
+    app = GUI()
+    app.run()
+
 
 if __name__ == "__main__":
-    main()
+    GUImain()
