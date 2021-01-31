@@ -225,6 +225,11 @@ class GUI:
                    text='清空选择',
                    command=self.button_clear
                    ).grid(row=0, column=3, **self.pad)
+        
+        ttk.Button(self.upper_frame,
+                   text='读取填写的 IP',
+                   command=self.button_read_ip
+                   ).grid(row=0, column=4, **self.pad)
 
     def layout_tree(self):
         # 鼠标点击后插入的索引，十六进制的内个，列表中的顺序
@@ -313,6 +318,10 @@ class GUI:
             print(self.matching[i])
         # TODO: ask the user what cmd is to be executed
 
+    def button_read_ip(self):
+        # TODO: finish this func
+        pass        
+
 
     def button_clear(self):
         self.selected_client_index = {}
@@ -326,6 +335,10 @@ class GUI:
         self.upper_frame.pack(**self.pad)
         self.bottom_frame.pack(**self.pad)
         self.root.mainloop()
+
+class PopoutWindow:
+    def __init__(self, imgFile, title, message):
+        pass
 
 
 # -------------------------------------------

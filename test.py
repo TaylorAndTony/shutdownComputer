@@ -1,13 +1,22 @@
-import os
-from pprint import pprint, pp
+from tkinter import *
 
-def asscociate_num_and_ip():
-    dct = {}
-    all_ip = [i[:-5] for i in os.listdir('online_devices')]
-    for k, v in zip(range(1, len(all_ip) + 1), all_ip):
-        dct[k] = v
-    return dct
+class PopoutWindow:
+    def __init__(self, imgFile, title, message):
+        self.root = Tk()
+        # self.root['title'] = title
+        self.message = message
+        self.photo = PhotoImage(file=imgFile)
+        self.leftSide = Frame(self.root)
+        self.rightSide = Frame(self.root)
+        Label(self.leftSide, image=self.photo).pack()
+        Label(self.rightSide, text=self.message).pack()
+        self.run()
 
+    def run(self):
+        self.leftSide.grid(row=0, column=0)
+        self.rightSide.grid(row=0, column=1)
+        self.root.mainloop()    
+        
 
 if __name__ == '__main__':
-    pp(asscociate_num_and_ip())
+    app = PopoutWindow('./img/home.png', 'test', 'hfduivsuhdgfgfhjtrrg')
