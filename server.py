@@ -101,6 +101,14 @@ def construct_cmd_data(cmd=[]) -> dict:
 #  useful commands
 # -------------------------------------------
 
+def asscociate_num_and_ip():
+    """ asscociate a self-increament num with ip listed in the folder """
+    dct = {}
+    all_ip = [i[:-5] for i in os.listdir('online_devices')]
+    for k, v in zip(range(1, len(all_ip) + 1), all_ip):
+        dct[k] = v
+    return dct
+
 
 def check_dir() -> None:
     """ check whether a directory exists """
@@ -212,6 +220,11 @@ class GUI:
                    text='发送命令',
                    command=self.button_send_command
                    ).grid(row=0, column=2, **self.pad)
+        
+        ttk.Button(self.upper_frame,
+                   text='清空选择',
+                   command=self.button_clear
+                   ).grid(row=0, column=3, **self.pad)
 
     def layout_tree(self):
         # 鼠标点击后插入的索引，十六进制的内个，列表中的顺序
@@ -221,6 +234,7 @@ class GUI:
         self.defenite_id = 0
         # 最终选择的客户端
         self.finally_selected_client = []
+        self.matching = {}
         # 定义中心列表区域
         self.tree = ttk.Treeview(
             self.bottom_frame, show="headings", height=8, columns=("a", "b", "c", "d"))
@@ -244,10 +258,6 @@ class GUI:
         self.vbar.grid(row=0, column=1, sticky=NS)
         self.tree.bind("<ButtonRelease-1>", self.tree_item_click)
         # testing purposes
-        self.tree_insert_value('127.0.0.1', '2021-1-31', 'intel core i7')
-        self.tree_insert_value('127.0.0.1', '2021-1-31', 'intel core i7')
-        self.tree_insert_value('127.0.0.1', '2021-1-31', 'intel core i7')
-        self.tree_insert_value('127.0.0.1', '2021-1-31', 'intel core i7')
 
     def tree_insert_value(self, clientIP, connectTime, CPU):
         """ 插入列表的基本方法 """
@@ -258,6 +268,7 @@ class GUI:
             connectTime,
             CPU
         ))
+        self.matching[self.defenite_id] = clientIP
 
     def tree_item_click(self, event):
         """
@@ -266,7 +277,8 @@ class GUI:
         selection = self.tree.selection()[0]
         hexx = str(selection[1:])
         num = int(hexx, 16)
-        self.selected_client_index[num] = self.selected_client_index.get(num, 0) + 1
+        self.selected_client_index[num] = self.selected_client_index.get(
+            num, 0) + 1
         self.tree_process_selected()
 
     def tree_process_selected(self):
@@ -285,10 +297,28 @@ class GUI:
         pass
 
     def button_refresh_list(self):
-        pass
+        all_file_path = os.listdir('online_devices')
+        for file in all_file_path:
+            print('处理：', file)
+            with open(f'./online_devices/{file}', 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                ip = data['hardware']['IP']
+                timee = data['time']
+                cpu = data['hardware']['CPU']
+                self.tree_insert_value(ip, timee, cpu)
 
     def button_send_command(self):
-        pass
+        print('以下客户端将被发送命令：')
+        for i in self.finally_selected_client:
+            print(self.matching[i])
+        # TODO: ask the user what cmd is to be executed
+
+
+    def button_clear(self):
+        self.selected_client_index = {}
+        self.finally_selected_client = []
+        print('选择列表已清空')
+
 
     def run(self):
         self.layout_buttons()
@@ -303,6 +333,7 @@ class GUI:
 # -------------------------------------------
 
 def main() -> None:
+    # ! abandoned!
     """# the entrance of this program"""
     print('输入序号 0，1，2 以选择服务端模式')
     print('0 为测试模式，请勿使用')
