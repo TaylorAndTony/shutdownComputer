@@ -6,6 +6,7 @@ import time
 import threading
 from pprint import pprint, pp
 from tkinter import *
+from tkinter import messagebox
 from tkinter import ttk
 
 
@@ -200,6 +201,7 @@ def let_multiple_client_exec_cmd(clientIPs: list, cmd: str):
 class GUI:
     def __init__(self):
         self.root = Tk()
+        self.root.title('自动关机')
         self.pad = {'padx': 10, 'pady': 10}
         # 界面分两部分，上面的控制按钮和下面的列表
         self.upper_frame = Frame(self.root)
@@ -220,12 +222,12 @@ class GUI:
                    text='发送命令',
                    command=self.button_send_command
                    ).grid(row=0, column=2, **self.pad)
-        
+
         ttk.Button(self.upper_frame,
                    text='清空选择',
                    command=self.button_clear
                    ).grid(row=0, column=3, **self.pad)
-        
+
         ttk.Button(self.upper_frame,
                    text='读取填写的 IP',
                    command=self.button_read_ip
@@ -237,7 +239,7 @@ class GUI:
         self.selected_client_index = {}
         # 用于插入数据时的左侧唯一编号，自增，该变量插入进 Tree
         self.defenite_id = 0
-        # 最终选择的客户端
+        # 最终选择的客户端, int
         self.finally_selected_client = []
         self.matching = {}
         # 定义中心列表区域
@@ -319,15 +321,18 @@ class GUI:
         # TODO: ask the user what cmd is to be executed
 
     def button_read_ip(self):
-        # TODO: finish this func
-        pass        
-
+        with open('manual_set_ip.txt', 'r', encoding='utf-8') as f:
+            IPs = f.read().splitlines()
+            self.finally_selected_client = [i for i in range(1, len(IPs) + 1)]
+        for ip in IPs:
+            self.tree_insert_value(ip, 'None', 'None')
+        
 
     def button_clear(self):
         self.selected_client_index = {}
         self.finally_selected_client = []
+        messagebox.showinfo('清空', '选择列表已清空')
         print('选择列表已清空')
-
 
     def run(self):
         self.layout_buttons()
@@ -335,10 +340,6 @@ class GUI:
         self.upper_frame.pack(**self.pad)
         self.bottom_frame.pack(**self.pad)
         self.root.mainloop()
-
-class PopoutWindow:
-    def __init__(self, imgFile, title, message):
-        pass
 
 
 # -------------------------------------------
