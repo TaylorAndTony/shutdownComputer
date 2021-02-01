@@ -4,64 +4,16 @@ import socketserver
 import os
 import time
 import threading
+import pyperclip
 from pprint import pprint, pp
 from tkinter import *
 from tkinter import messagebox
 from tkinter import ttk
 
-
-# -------------------------------------------
-#  This server class
-# -------------------------------------------
-
-
-class MyTCPHandler(socketserver.BaseRequestHandler):
-
-    def handle(self):
-        # original data
-        self.data = self.request.recv(1024).strip()
-        # ip
-        self.come_ip = self.client_address[0]
-        print("{} 连接到此服务器".format(self.come_ip))
-        # decoded receved msg
-        self.content = str(self.data, 'utf-8')
-        self.content = self.content.replace("'", '"')
-        # this `ready` is the json data transmitted from client
-        ready = json.loads(self.content)
-        # and i will save those data in the folder `./online_devices`
-        self.log_this_device(self.come_ip, ready)
-
-    def exec_multi_cmd(self, cmds: list):
-        """a method used to execute multiple commands"""
-        for cmd in cmds:
-            os.system(cmd)
-            time.sleep(0.5)
-
-    def log_this_device(self, device_ip, json_thing):
-        """
-        a method used to create <ip>.json in folder
-        and analyse the json to decide what to do next
-        """
-        # the `json_thing` should be a json file loaded by `json.loads`
-        with open(f'./online_devices/{device_ip}.json', 'w') as f:
-            json.dump(json_thing, f)
-        print(f'{device_ip}.json 数据已写入')
-        # the client wants to send a message
-        if json_thing["mode"] == "send-message":
-            print('有 {} 发来的消息：\n{}'.format(
-                self.come_ip, json_thing["extraInfo"]))
-        # the client wants the server to execute multiple commands
-        elif json_thing["mode"] == 'exec-command':
-            print('{} 希望执行 {} 个命令'.format(
-                self.come_ip, len(
-                    json_thing["cmdList"])
-            ))
-            self.exec_multi_cmd(json_thing["cmdList"])
-
-
 # -------------------------------------------
 #  sending message to another client
 # -------------------------------------------
+
 
 def send_msg(host, port, msg):
     """基本通讯"""
@@ -75,32 +27,17 @@ def send_msg(host, port, msg):
         sock.close()
 
 
-def send_json(host: str, port: int, dict_data: dict):
-    """封装了基本通讯，可以发送一个字典"""
-    msg = str(dict_data).replace('\n', '')
-    times = 0
-    while times <= 3:
-        times += 1
-        try:
-            send_msg(host, port, msg)
-            return
-        except ConnectionRefusedError:
-            print('目标客户端 {}:{} 连接失败，进行第 {} 次尝试'.format(host, port, times))
-    print('数据发送失败')
-
-
 def construct_cmd_data(cmd=[]) -> dict:
     """ 构建用于通讯的字典数据 """
     print('正在获取硬件信息...')
-    data = {
-        "cmdList": cmd
-    }
+    data = {"cmdList": cmd}
     return data
 
 
 # -------------------------------------------
 #  useful commands
 # -------------------------------------------
+
 
 def asscociate_num_and_ip():
     """ asscociate a self-increament num with ip listed in the folder """
@@ -133,64 +70,6 @@ def find_all_online_devices() -> list:
         ips.append(ip)
     return ips
 
-# -------------------------------------------
-#  server functions
-# -------------------------------------------
-
-
-def start_server() -> None:
-    """
-    # The most *Basic* function to start a server
-    if you directly call this function,
-    the current thread will be blocked
-    """
-    with open('server.json', 'r') as f:
-        a = json.load(f)
-    PORT = a['port']
-    IP = a['ip']
-    server = socketserver.TCPServer((IP, PORT), MyTCPHandler)
-    check_dir()
-    print('服务已启动：', IP, PORT)
-    server.serve_forever()
-
-
-def kick_start_server() -> None:
-    """
-    # Start the server automatically, the entance of typing 1
-    Besides kick start the server, this func will also
-    delete all the histories of connected clients.
-    """
-    print()
-    print('   清空客户端连接历史记录')
-    print('   请确认删除')
-    print('   在完成客户端记录后，请按下 Ctrl + C 手动停止该服务器')
-    print('   若无反应，可在按下快捷键后回车。')
-    print('   随后再次打开该程序进行其他操作。')
-
-    os.system('del online_devices\*')
-    t = threading.Thread(target=start_server)
-    t.setDaemon(True)
-    t.start()
-    print('服务器已做为子线程启动')
-
-# -------------------------------------------
-#  Send commands to client
-# -------------------------------------------
-
-
-def let_client_exec_cmd(client_ip: str, cmd: str):
-    """ let a single client execute cmds """
-    with open('server.json', 'r') as f:
-        a = json.load(f)
-    CMDPORT = a['cmd_port']
-    data = construct_cmd_data(cmd)
-    send_json(client_ip, CMDPORT, data)
-
-
-def let_multiple_client_exec_cmd(clientIPs: list, cmd: str):
-    for each_client in clientIPs:
-        print('当前执行命令的客户端 IP ：{}'.format(each_client))
-        let_client_exec_cmd(each_client, cmd)
 
 
 # -------------------------------------------
@@ -210,28 +89,36 @@ class GUI:
     def layout_buttons(self):
         ttk.Button(self.upper_frame,
                    text='监听客户端',
-                   command=self.button_start_listenning
-                   ).grid(row=0, column=0, **self.pad)
+                   command=self.button_start_listenning).grid(row=0,
+                                                              column=0,
+                                                              **self.pad)
 
         ttk.Button(self.upper_frame,
                    text='刷新列表',
-                   command=self.button_refresh_list
-                   ).grid(row=0, column=1, **self.pad)
+                   command=self.button_refresh_list).grid(row=0,
+                                                          column=1,
+                                                          **self.pad)
 
         ttk.Button(self.upper_frame,
                    text='发送命令',
-                   command=self.button_send_command
-                   ).grid(row=0, column=2, **self.pad)
+                   command=self.button_send_command).grid(row=0,
+                                                          column=2,
+                                                          **self.pad)
+
+        ttk.Button(self.upper_frame, text='清空选择',
+                   command=self.button_clear).grid(row=0, column=3, **self.pad)
 
         ttk.Button(self.upper_frame,
-                   text='清空选择',
-                   command=self.button_clear
-                   ).grid(row=0, column=3, **self.pad)
+                   text='读取文本文档 IP',
+                   command=self.button_read_ip).grid(row=0,
+                                                     column=4,
+                                                     **self.pad)
 
         ttk.Button(self.upper_frame,
-                   text='读取填写的 IP',
-                   command=self.button_read_ip
-                   ).grid(row=0, column=4, **self.pad)
+                   text='读取目录下全部 IP',
+                   command=self.btn_load_all_ip).grid(row=0,
+                                                      column=5,
+                                                      **self.pad)
 
     def layout_tree(self):
         # 鼠标点击后插入的索引，十六进制的内个，列表中的顺序
@@ -241,12 +128,17 @@ class GUI:
         self.defenite_id = 0
         # 最终选择的客户端, int
         self.finally_selected_client = []
+        # 发送失败的客户端, List[str]
+        self.failed = []
         self.matching = {}
         # 定义中心列表区域
-        self.tree = ttk.Treeview(
-            self.bottom_frame, show="headings", height=8, columns=("a", "b", "c", "d"))
-        self.vbar = ttk.Scrollbar(
-            self.bottom_frame, orient=VERTICAL, command=self.tree.yview)
+        self.tree = ttk.Treeview(self.bottom_frame,
+                                 show="headings",
+                                 height=8,
+                                 columns=("a", "b", "c", "d"))
+        self.vbar = ttk.Scrollbar(self.bottom_frame,
+                                  orient=VERTICAL,
+                                  command=self.tree.yview)
         # 定义树形结构与滚动条
         self.tree.configure(yscrollcommand=self.vbar.set)
         # 表格的标题
@@ -269,12 +161,9 @@ class GUI:
     def tree_insert_value(self, clientIP, connectTime, CPU):
         """ 插入列表的基本方法 """
         self.defenite_id += 1
-        self.tree.insert("", "end", values=(
-            self.defenite_id,
-            clientIP,
-            connectTime,
-            CPU
-        ))
+        self.tree.insert("",
+                         "end",
+                         values=(self.defenite_id, clientIP, connectTime, CPU))
         self.matching[self.defenite_id] = clientIP
 
     def tree_item_click(self, event):
@@ -309,16 +198,29 @@ class GUI:
             print('处理：', file)
             with open(f'./online_devices/{file}', 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                ip = data['hardware']['IP']
+                # ! ip issues
+                # ip = data['hardware']['IP']
+                ip = data['serverFindIP']
                 timee = data['time']
                 cpu = data['hardware']['CPU']
                 self.tree_insert_value(ip, timee, cpu)
 
     def button_send_command(self):
-        print('以下客户端将被发送命令：')
-        for i in self.finally_selected_client:
-            print(self.matching[i])
-        # TODO: ask the user what cmd is to be executed
+        if len(self.finally_selected_client) == 0:
+            messagebox.showerror('error', '还没有选择客户端')
+        else:
+            print('以下客户端将被发送命令：')
+            clientIPs = []
+            for i in self.finally_selected_client:
+                clientIPs.append(self.matching[i])
+                print(self.matching[i])
+            messagebox.showinfo('注意', '请复制需要执行的命令，软件即将读取剪切板')
+            cmd = pyperclip.paste()
+            messagebox.showinfo('结果','将执行以下命令：\n{}'.format(cmd))
+            self.let_multiple_client_exec_cmd(clientIPs, cmd,)
+            print('\n\n发送失败的连接：')
+            pp(self.failed)
+        
 
     def button_read_ip(self):
         with open('manual_set_ip.txt', 'r', encoding='utf-8') as f:
@@ -326,13 +228,51 @@ class GUI:
             self.finally_selected_client = [i for i in range(1, len(IPs) + 1)]
         for ip in IPs:
             self.tree_insert_value(ip, 'None', 'None')
-        
+        messagebox.showinfo('注意', '将自动选择所有的客户端')
 
     def button_clear(self):
         self.selected_client_index = {}
         self.finally_selected_client = []
         messagebox.showinfo('清空', '选择列表已清空')
         print('选择列表已清空')
+
+    def btn_load_all_ip(self):
+        all_file_path = os.listdir('online_devices')
+        all_ip_str = [i[:-5] for i in all_file_path]
+        pp(all_ip_str)
+        with open('manual_set_ip.txt', 'w') as f:
+            f.write('\n'.join(all_ip_str))
+        messagebox.showinfo('信息', '所有 IP 已写入文本文档，请点击“读取填写的 IP”按钮')
+    
+    
+    def send_json(self, host: str, port: int, dict_data: dict):
+        """封装了基本通讯，可以发送一个字典"""
+        msg = str(dict_data).replace('\n', '')
+        times = 0
+        while times <= 2:
+            times += 1
+            try:
+                send_msg(host, port, msg)
+                return
+            except ConnectionRefusedError:
+                print('目标客户端 {}:{} 连接失败，进行第 {} 次尝试'.format(host, port, times))
+        print('数据发送失败，当前客户端已加入失败列表')
+        self.failed.append(host)
+
+    def let_client_exec_cmd(self, client_ip: str, cmd: str):
+        """ let a single client execute cmds """
+        with open('server.json', 'r') as f:
+            a = json.load(f)
+        CMDPORT = a['cmd_port']
+        data = construct_cmd_data(cmd)
+        self.send_json(client_ip, CMDPORT, data)
+
+
+    def let_multiple_client_exec_cmd(self, clientIPs: list, cmd: str):
+        for each_client in clientIPs:
+            print('当前执行命令的客户端 IP ：{}'.format(each_client))
+            self.let_client_exec_cmd(each_client, cmd)
+
 
     def run(self):
         self.layout_buttons()
@@ -342,9 +282,11 @@ class GUI:
         self.root.mainloop()
 
 
+
 # -------------------------------------------
 #  main prog
 # -------------------------------------------
+
 
 def main() -> None:
     # ! abandoned!
@@ -356,15 +298,15 @@ def main() -> None:
     print('')
     while True:
         mode = input('输入数字：')
-        if mode not in {'1', '2', '0'}:
-            continue
-        elif mode == '0':
-            let_client_exec_cmd('127.0.0.1', ['calc'])     # <- testing method
-        elif mode == '1':
-            kick_start_server()
-        elif mode == '2':
-            # need to be developed
-            pass
+        # if mode not in {'1', '2', '0'}:
+        #     continue
+        # elif mode == '0':
+        #     let_client_exec_cmd('127.0.0.1', ['calc'])  # <- testing method
+        # elif mode == '1':
+        #     kick_start_server()
+        # elif mode == '2':
+        #     # need to be developed
+        #     pass
 
 
 def GUImain():
