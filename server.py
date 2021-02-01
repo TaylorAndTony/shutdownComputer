@@ -1,14 +1,19 @@
+"""
+此文件仅保留本地文件管理、命令发送功能
+客户端的连接依靠 server_functions.py 进行
+server_functions.py 依赖文件夹 online_devices，用于记录客户端的json数据
+此 py 依赖文件夹 server_logged_devices，用于确定发送命令的ip
+使用时先运行 server_functions.py 记录客户端，完成记录后关闭server_functions.py
+随后运行此 py，点击同步记录，将自动复制记录的json到server_logged_devices
+"""
 import json
-import socket
-import socketserver
 import os
-import time
-import threading
-import pyperclip
-from pprint import pprint, pp
+import socket
+from pprint import pp, pprint
 from tkinter import *
-from tkinter import messagebox
-from tkinter import ttk
+from tkinter import messagebox, ttk
+
+import pyperclip
 
 # -------------------------------------------
 #  sending message to another client
@@ -42,7 +47,7 @@ def construct_cmd_data(cmd=[]) -> dict:
 def asscociate_num_and_ip():
     """ asscociate a self-increament num with ip listed in the folder """
     dct = {}
-    all_ip = [i[:-5] for i in os.listdir('online_devices')]
+    all_ip = [i[:-5] for i in os.listdir('server_logged_devices')]
     for k, v in zip(range(1, len(all_ip) + 1), all_ip):
         dct[k] = v
     return dct
@@ -50,19 +55,19 @@ def asscociate_num_and_ip():
 
 def check_dir() -> None:
     """ check whether a directory exists """
-    if not os.path.exists('online_devices'):
-        os.mkdir('online_devices')
-        print('Folder online_devices has been created')
+    if not os.path.exists('server_logged_devices'):
+        os.mkdir('server_logged_devices')
+        print('Folder server_logged_devices has been created')
     else:
-        print('Directory {} fond'.format('online_devices'))
+        print('Directory {} fond'.format('server_logged_devices'))
 
 
-def find_all_online_devices() -> list:
+def find_all_server_logged_devices() -> list:
     """
-    go through all json files in the folder ./online_devices
+    go through all json files in the folder ./server_logged_devices
     to find all online clients' ip
     """
-    files = os.listdir('./online_devices')
+    files = os.listdir('./server_logged_devices')
     # ['127.0.0.1.json']
     ips = []
     for i in files:
@@ -87,9 +92,10 @@ class GUI:
         self.bottom_frame = Frame(self.root)
 
     def layout_buttons(self):
+        # ! 把这里改成同步列表数据
         ttk.Button(self.upper_frame,
-                   text='监听客户端',
-                   command=self.button_start_listenning).grid(row=0,
+                   text='同步记录数据',
+                   command=self.button_sync_data).grid(row=0,
                                                               column=0,
                                                               **self.pad)
 
@@ -189,14 +195,19 @@ class GUI:
                 self.finally_selected_client.append(k)
         print(self.finally_selected_client)
 
-    def button_start_listenning(self):
-        pass
+    def button_sync_data(self):
+        with open('server.json', 'r', encoding='utf-8') as f:
+            settings = json.load(f)
+        src = settings['copyFrom']
+        dst = settings['copyTo']
+        os.system('del {}\\*'.format(dst))
+        os.system('xcopy {} {}'.format(src, dst))
 
     def button_refresh_list(self):
-        all_file_path = os.listdir('online_devices')
+        all_file_path = os.listdir('server_logged_devices')
         for file in all_file_path:
             print('处理：', file)
-            with open(f'./online_devices/{file}', 'r', encoding='utf-8') as f:
+            with open(f'./server_logged_devices/{file}', 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 # ! ip issues
                 # ip = data['hardware']['IP']
@@ -237,7 +248,7 @@ class GUI:
         print('选择列表已清空')
 
     def btn_load_all_ip(self):
-        all_file_path = os.listdir('online_devices')
+        all_file_path = os.listdir('server_logged_devices')
         all_ip_str = [i[:-5] for i in all_file_path]
         pp(all_ip_str)
         with open('manual_set_ip.txt', 'w') as f:

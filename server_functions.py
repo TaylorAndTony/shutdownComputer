@@ -19,6 +19,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         # this `ready` is the json data transmitted from client
         # ! i modified here
         # ready = json.loads(self.content)
+        # 加载 json
         ready = json.loads(str(self.recieved_dct).replace("'", '"'))
         # and i will save those data in the folder `./online_devices`
         self.log_this_device(self.come_ip, ready)
