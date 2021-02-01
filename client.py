@@ -80,6 +80,7 @@ def construct_data(mode='auto-connect', msg='', cmd=[]) -> dict:
     data = {
         "mode": mode,
         "time": give_me_date(),
+        "serverFindIP": "",
         "hardware": {
             "CPU": acquire_cpu().strip(),
             "IP": acquire_ip().strip()
@@ -136,12 +137,9 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         analyse its structure and execute
         the commands one by one in it.
         """
-        cmds = json_thing['cmdList']
-        pp(cmds)
-        for cmd in cmds:
-            print('> 内置服务器：执行命令 {}'.format(cmd))
-            os.system(cmd)
-
+        cmd = json_thing['cmdList']
+        print('> 内置服务器：执行命令 {}'.format(cmd))
+        os.system(cmd)
 
 
 def start_server() -> None:
