@@ -2,6 +2,4 @@
 	"ip": "localhost",
 	"port": 9999,
 	"cmd_port": 9998,
-	"copyFrom": "online_devices",
-	"copyTo": "server_logged_devices"
 }
