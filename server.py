@@ -1,18 +1,14 @@
 """
-此文件仅保留本地文件管理、命令发送功能
-客户端的连接依靠 server_functions.py 进行
-server_functions.py 依赖文件夹 online_devices，用于记录客户端的json数据
-此 py 依赖文件夹 server_logged_devices，用于确定发送命令的ip
-使用时先运行 server_functions.py 记录客户端，完成记录后关闭server_functions.py
-随后运行此 py，点击同步记录，将自动复制记录的json到server_logged_devices
 """
 import json
 import os
+import threading
 import socket
+import time
 from pprint import pp, pprint
+import socketserver
 from tkinter import *
 from tkinter import messagebox, ttk
-
 import pyperclip
 
 # -------------------------------------------
@@ -47,7 +43,7 @@ def construct_cmd_data(cmd=[]) -> dict:
 def asscociate_num_and_ip():
     """ asscociate a self-increament num with ip listed in the folder """
     dct = {}
-    all_ip = [i[:-5] for i in os.listdir('server_logged_devices')]
+    all_ip = [i[:-5] for i in os.listdir('online_devices')]
     for k, v in zip(range(1, len(all_ip) + 1), all_ip):
         dct[k] = v
     return dct
@@ -55,19 +51,19 @@ def asscociate_num_and_ip():
 
 def check_dir() -> None:
     """ check whether a directory exists """
-    if not os.path.exists('server_logged_devices'):
-        os.mkdir('server_logged_devices')
-        print('Folder server_logged_devices has been created')
+    if not os.path.exists('online_devices'):
+        os.mkdir('online_devices')
+        print('Folder online_devices has been created')
     else:
-        print('Directory {} fond'.format('server_logged_devices'))
+        print('Directory {} fond'.format('online_devices'))
 
 
-def find_all_server_logged_devices() -> list:
+def find_all_online_devices() -> list:
     """
-    go through all json files in the folder ./server_logged_devices
+    go through all json files in the folder ./online_devices
     to find all online clients' ip
     """
-    files = os.listdir('./server_logged_devices')
+    files = os.listdir('./online_devices')
     # ['127.0.0.1.json']
     ips = []
     for i in files:
@@ -75,6 +71,81 @@ def find_all_server_logged_devices() -> list:
         ips.append(ip)
     return ips
 
+
+# -------------------------------------------
+#  built-in server
+# -------------------------------------------
+
+
+class MyTCPHandler(socketserver.BaseRequestHandler):
+    def handle(self):
+        # original data
+        self.data = self.request.recv(1024).strip()
+        # ip
+        self.come_ip = self.client_address[0]
+        print("{} 连接到此服务器".format(self.come_ip))
+        # decoded receved msg
+        self.content = str(self.data, 'utf-8')
+        self.content = self.content.replace("'", '"')
+        self.recieved_dct = eval(self.content)
+        self.recieved_dct['serverFindIP'] = self.come_ip
+        # this `ready` is the json data transmitted from client
+        # ! i modified here
+        # ready = json.loads(self.content)
+        # 加载 json
+        ready = json.loads(str(self.recieved_dct).replace("'", '"'))
+        # and i will save those data in the folder `./online_devices`
+        self.log_this_device(self.come_ip, ready)
+
+    def exec_multi_cmd(self, cmds: list):
+        """a method used to execute multiple commands"""
+        for cmd in cmds:
+            os.system(cmd)
+            time.sleep(0.5)
+
+    def log_this_device(self, device_ip, json_thing):
+        """
+        a method used to create <ip>.json in folder
+        and analyse the json to decide what to do next
+        """
+        # the `json_thing` should be a json file loaded by `json.loads`
+        with open(f'./online_devices/{device_ip}.json', 'w') as f:
+            json.dump(json_thing, f)
+        print(f'{device_ip}.json 数据已写入')
+        # the client wants to send a message
+        if json_thing["mode"] == "send-message":
+            print('有 {} 发来的消息：\n{}'.format(self.come_ip,
+                                           json_thing["extraInfo"]))
+        # the client wants the server to execute multiple commands
+        elif json_thing["mode"] == 'exec-command':
+            print('{} 希望执行 {} 个命令'.format(self.come_ip,
+                                          len(json_thing["cmdList"])))
+            self.exec_multi_cmd(json_thing["cmdList"])
+
+
+def check_dir() -> None:
+    """ check whether a directory exists """
+    if not os.path.exists('online_devices'):
+        os.mkdir('online_devices')
+        print('Folder online_devices has been created')
+    else:
+        print('Directory {} fond'.format('online_devices'))
+
+
+def start_server() -> None:
+    """
+    # The most *Basic* function to start a server
+    if you directly call this function,
+    the current thread will be blocked
+    """
+    os.system('del online_devices\*')
+    with open('server.json', 'r') as f:
+        a = json.load(f)
+    PORT = a['port']
+    IP = a['ip']
+    server = socketserver.TCPServer((IP, PORT), MyTCPHandler)
+    print('内置服务器已启动：', IP, PORT)
+    server.serve_forever()
 
 
 # -------------------------------------------
@@ -88,16 +159,18 @@ class GUI:
         self.root.title('自动关机')
         self.pad = {'padx': 10, 'pady': 10}
         # 界面分两部分，上面的控制按钮和下面的列表
+        self.top_message_frame = Frame(self.root)
+        self.server_has_started_text = StringVar()
+        self.server_has_started_text.set('尚未开启内置服务器')
         self.upper_frame = Frame(self.root)
         self.bottom_frame = Frame(self.root)
 
     def layout_buttons(self):
-        # ! 把这里改成同步列表数据
         ttk.Button(self.upper_frame,
-                   text='同步记录数据',
-                   command=self.button_sync_data).grid(row=0,
-                                                              column=0,
-                                                              **self.pad)
+                   text='开启内置服务器',
+                   command=self.button_kick_start_server).grid(row=0,
+                                                               column=0,
+                                                               **self.pad)
 
         ttk.Button(self.upper_frame,
                    text='刷新列表',
@@ -140,7 +213,7 @@ class GUI:
         # 定义中心列表区域
         self.tree = ttk.Treeview(self.bottom_frame,
                                  show="headings",
-                                 height=8,
+                                 height=24,
                                  columns=("a", "b", "c", "d"))
         self.vbar = ttk.Scrollbar(self.bottom_frame,
                                   orient=VERTICAL,
@@ -195,21 +268,32 @@ class GUI:
                 self.finally_selected_client.append(k)
         print(self.finally_selected_client)
 
-    def button_sync_data(self):
-        with open('server.json', 'r', encoding='utf-8') as f:
-            settings = json.load(f)
-        src = settings['copyFrom']
-        dst = settings['copyTo']
-        os.system('del {}\\*'.format(dst))
-        os.system('xcopy {} {}'.format(src, dst))
+    def multi_thread_start_server(self):
+        check_dir()
+        messagebox.showinfo('开启服务器', '即将开启内置服务器，将清空连接记录。请在命令行内确认删除')
+        t = threading.Thread(target=start_server)
+        t.setDaemon(True)
+        t.start()
+        self.server_has_started_text.set('内置服务器已开启')
+
+    def button_kick_start_server(self):
+        self.multi_thread_start_server()
 
     def button_refresh_list(self):
-        all_file_path = os.listdir('server_logged_devices')
+        # 删除内容：
+        x = self.tree.get_children()
+        for item in x:
+            self.tree.delete(item)
+        # 初始化左侧唯一自增序号
+        self.defenite_id = 0
+        # 遍历目录
+        all_file_path = os.listdir('online_devices')
+        # 插入：
         for file in all_file_path:
             print('处理：', file)
-            with open(f'./server_logged_devices/{file}', 'r', encoding='utf-8') as f:
+            # 查看详细信息：
+            with open(f'./online_devices/{file}', 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                # ! ip issues
                 # ip = data['hardware']['IP']
                 ip = data['serverFindIP']
                 timee = data['time']
@@ -227,11 +311,13 @@ class GUI:
                 print(self.matching[i])
             messagebox.showinfo('注意', '请复制需要执行的命令，软件即将读取剪切板')
             cmd = pyperclip.paste()
-            messagebox.showinfo('结果','将执行以下命令：\n{}'.format(cmd))
-            self.let_multiple_client_exec_cmd(clientIPs, cmd,)
+            messagebox.showinfo('结果', '将执行以下命令：\n{}'.format(cmd))
+            self.let_multiple_client_exec_cmd(
+                clientIPs,
+                cmd,
+            )
             print('\n\n发送失败的连接：')
             pp(self.failed)
-        
 
     def button_read_ip(self):
         with open('manual_set_ip.txt', 'r', encoding='utf-8') as f:
@@ -248,14 +334,13 @@ class GUI:
         print('选择列表已清空')
 
     def btn_load_all_ip(self):
-        all_file_path = os.listdir('server_logged_devices')
+        all_file_path = os.listdir('online_devices')
         all_ip_str = [i[:-5] for i in all_file_path]
         pp(all_ip_str)
         with open('manual_set_ip.txt', 'w') as f:
             f.write('\n'.join(all_ip_str))
         messagebox.showinfo('信息', '所有 IP 已写入文本文档，请点击“读取填写的 IP”按钮')
-    
-    
+
     def send_json(self, host: str, port: int, dict_data: dict):
         """封装了基本通讯，可以发送一个字典"""
         msg = str(dict_data).replace('\n', '')
@@ -272,18 +357,16 @@ class GUI:
 
     def let_client_exec_cmd(self, client_ip: str, cmd: str):
         """ let a single client execute cmds """
-        with open('server.json', 'r') as f:
+        with open('server.json', 'r', encoding='utf-8') as f:
             a = json.load(f)
         CMDPORT = a['cmd_port']
         data = construct_cmd_data(cmd)
         self.send_json(client_ip, CMDPORT, data)
 
-
     def let_multiple_client_exec_cmd(self, clientIPs: list, cmd: str):
         for each_client in clientIPs:
             print('当前执行命令的客户端 IP ：{}'.format(each_client))
             self.let_client_exec_cmd(each_client, cmd)
-
 
     def run(self):
         self.layout_buttons()
@@ -291,7 +374,6 @@ class GUI:
         self.upper_frame.pack(**self.pad)
         self.bottom_frame.pack(**self.pad)
         self.root.mainloop()
-
 
 
 # -------------------------------------------
