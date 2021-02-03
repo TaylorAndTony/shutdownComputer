@@ -41,7 +41,12 @@ def construct_cmd_data(cmd=[]) -> dict:
 
 
 def asscociate_num_and_ip():
-    """ asscociate a self-increament num with ip listed in the folder """
+    """ 
+    asscociate a self-increament num with ip listed in the folder 
+    此函数在程序中没有被调用
+    但是删除该函数会引发 json 解码 bug
+    请勿修改此没用的函数
+    """
     dct = {}
     all_ip = [i[:-5] for i in os.listdir('online_devices')]
     for k, v in zip(range(1, len(all_ip) + 1), all_ip):
@@ -158,42 +163,48 @@ class GUI:
         self.root = Tk()
         self.root.title('自动关机')
         self.pad = {'padx': 10, 'pady': 10}
-        # 界面分两部分，上面的控制按钮和下面的列表
+        # 界面分四部分，从上到下分别为：
+        # 状态显示
+        # 命令输入
+        # 控制按钮
+        # 客户端列表
         self.top_message_frame = Frame(self.root)
         self.server_has_started_text = StringVar()
         self.server_has_started_text.set('尚未开启内置服务器')
-        self.upper_frame = Frame(self.root)
-        self.bottom_frame = Frame(self.root)
+        self.command_frame = Frame(self.root)
+        self.command_entry = Entry(self.command_frame)
+        self.button_frame = Frame(self.root)
+        self.client_list_frame = Frame(self.root)
 
     def layout_buttons(self):
-        ttk.Button(self.upper_frame,
+        ttk.Button(self.button_frame,
                    text='开启内置服务器',
                    command=self.button_kick_start_server).grid(row=0,
                                                                column=0,
                                                                **self.pad)
 
-        ttk.Button(self.upper_frame,
+        ttk.Button(self.button_frame,
                    text='刷新列表',
                    command=self.button_refresh_list).grid(row=0,
                                                           column=1,
                                                           **self.pad)
 
-        ttk.Button(self.upper_frame,
+        ttk.Button(self.button_frame,
                    text='发送命令',
                    command=self.button_send_command).grid(row=0,
                                                           column=2,
                                                           **self.pad)
 
-        ttk.Button(self.upper_frame, text='清空选择',
+        ttk.Button(self.button_frame, text='清空选择',
                    command=self.button_clear).grid(row=0, column=3, **self.pad)
 
-        ttk.Button(self.upper_frame,
+        ttk.Button(self.button_frame,
                    text='读取文本文档 IP',
                    command=self.button_read_ip).grid(row=0,
                                                      column=4,
                                                      **self.pad)
 
-        ttk.Button(self.upper_frame,
+        ttk.Button(self.button_frame,
                    text='读取目录下全部 IP',
                    command=self.btn_load_all_ip).grid(row=0,
                                                       column=5,
@@ -211,11 +222,11 @@ class GUI:
         self.failed = []
         self.matching = {}
         # 定义中心列表区域
-        self.tree = ttk.Treeview(self.bottom_frame,
+        self.tree = ttk.Treeview(self.client_list_frame,
                                  show="headings",
                                  height=24,
                                  columns=("a", "b", "c", "d"))
-        self.vbar = ttk.Scrollbar(self.bottom_frame,
+        self.vbar = ttk.Scrollbar(self.client_list_frame,
                                   orient=VERTICAL,
                                   command=self.tree.yview)
         # 定义树形结构与滚动条
@@ -309,8 +320,7 @@ class GUI:
             for i in self.finally_selected_client:
                 clientIPs.append(self.matching[i])
                 print(self.matching[i])
-            messagebox.showinfo('注意', '请复制需要执行的命令，软件即将读取剪切板')
-            cmd = pyperclip.paste()
+            cmd = self.command_entry.get()
             messagebox.showinfo('结果', '将执行以下命令：\n{}'.format(cmd))
             self.let_multiple_client_exec_cmd(
                 clientIPs,
@@ -368,11 +378,26 @@ class GUI:
             print('当前执行命令的客户端 IP ：{}'.format(each_client))
             self.let_client_exec_cmd(each_client, cmd)
 
+    def layout_top_msg_frame(self):
+        Label(self.top_message_frame,
+              textvariable=self.server_has_started_text).pack(**self.pad)
+        self.top_message_frame.pack(**self.pad)
+
+    def layout_command_frame(self):
+        Label(self.command_frame, text='执行命令：').grid(
+            row=0,
+            column=0,
+        )
+        self.command_entry.grid(row=0, column=1)
+        self.command_frame.pack(**self.pad)
+
     def run(self):
+        self.layout_top_msg_frame()
+        self.layout_command_frame()
         self.layout_buttons()
         self.layout_tree()
-        self.upper_frame.pack(**self.pad)
-        self.bottom_frame.pack(**self.pad)
+        self.button_frame.pack(**self.pad)
+        self.client_list_frame.pack(**self.pad)
         self.root.mainloop()
 
 
