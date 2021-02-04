@@ -1,5 +1,6 @@
 {
-	"ip": "127.0.0.1",
+	"localip": "localhost",
+	"targetip": "localhost",
 	"port": 9999,
 	"cmd_port": 9998
 }

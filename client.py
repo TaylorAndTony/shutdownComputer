@@ -99,7 +99,7 @@ def send_auto_data_until_success():
     with open('client.json', 'r') as f:
         a = json.load(f)
     port = a['port']
-    ip = a['ip']
+    ip = a['targetip']
     data = construct_data('auto-connect')  # <- modify here!
     connected = False
     while not connected:
@@ -151,7 +151,7 @@ def start_server() -> None:
     with open('client.json', 'r') as f:
         a = json.load(f)
     PORT = a['cmd_port']
-    IP = a['ip']
+    IP = a['localip']
     server = socketserver.TCPServer((IP, PORT), MyTCPHandler)
     print('监听服务端发送命令的子服务器已启动：', IP, PORT)
     server.serve_forever()
