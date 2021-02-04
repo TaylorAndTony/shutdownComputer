@@ -1,14 +1,13 @@
-"""
-"""
 import json
 import os
-import threading
 import socket
+import socketserver
+import threading
 import time
 from pprint import pp, pprint
-import socketserver
 from tkinter import *
 from tkinter import messagebox, ttk
+
 import pyperclip
 
 # -------------------------------------------
@@ -16,7 +15,7 @@ import pyperclip
 # -------------------------------------------
 
 
-def send_msg(host, port, msg):
+def send_msg(host, port, msg) -> None:
     """基本通讯"""
     print('尝试连接', host, ':', port)
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -40,7 +39,7 @@ def construct_cmd_data(cmd=[]) -> dict:
 # -------------------------------------------
 
 
-def asscociate_num_and_ip():
+def asscociate_num_and_ip() -> dict:
     """ 
     asscociate a self-increament num with ip listed in the folder 
     此函数在程序中没有被调用
@@ -63,7 +62,7 @@ def check_dir() -> None:
         print('Directory {} fond'.format('online_devices'))
 
 
-def find_all_online_devices() -> list:
+def find_all_online_devices() -> List[str]:
     """
     go through all json files in the folder ./online_devices
     to find all online clients' ip
@@ -84,6 +83,13 @@ def find_all_online_devices() -> list:
 
 class MyTCPHandler(socketserver.BaseRequestHandler):
     def handle(self):
+        """
+        handel the data sent to this server, the data shoud be like:
+        - a json file sent in str format
+        - contains key `mode`
+        - has an empty key `serverFindIP`
+        used to log its online ip, not the local client ip
+        """
         # original data
         self.data = self.request.recv(1024).strip()
         # ip
@@ -93,9 +99,9 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         self.content = str(self.data, 'utf-8')
         self.content = self.content.replace("'", '"')
         self.recieved_dct = eval(self.content)
+        # insert the ip address find by this server
         self.recieved_dct['serverFindIP'] = self.come_ip
         # this `ready` is the json data transmitted from client
-        # ! i modified here
         # ready = json.loads(self.content)
         # 加载 json
         ready = json.loads(str(self.recieved_dct).replace("'", '"'))
@@ -159,6 +165,7 @@ def start_server() -> None:
 
 
 class GUI:
+    """ a simple GUI for this main program """
     def __init__(self):
         self.root = Tk()
         self.root.title('自动关机')
@@ -374,6 +381,7 @@ class GUI:
         self.send_json(client_ip, CMDPORT, data)
 
     def let_multiple_client_exec_cmd(self, clientIPs: list, cmd: str):
+        """ let multiple client execute cmd, just send cmd one by one """
         for each_client in clientIPs:
             print('当前执行命令的客户端 IP ：{}'.format(each_client))
             self.let_client_exec_cmd(each_client, cmd)
@@ -427,7 +435,7 @@ def main() -> None:
         #     pass
 
 
-def GUImain():
+def GUImain() -> None:
     app = GUI()
     app.run()
 
