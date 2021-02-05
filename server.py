@@ -328,7 +328,8 @@ class GUI:
                 clientIPs.append(self.matching[i])
                 print(self.matching[i])
             cmd = self.command_entry.get()
-            messagebox.showinfo('结果', '将执行以下命令：\n{}'.format(cmd))
+            # 又没法取消干脆不提示了
+            # messagebox.showinfo('结果', '将执行以下命令：\n{}'.format(cmd))
             self.let_multiple_client_exec_cmd(
                 clientIPs,
                 cmd,
@@ -345,6 +346,7 @@ class GUI:
         messagebox.showinfo('注意', '将自动选择所有的客户端')
 
     def button_clear(self):
+        self.defenite_id = 0
         self.selected_client_index = {}
         self.finally_selected_client = []
         messagebox.showinfo('清空', '选择列表已清空')
