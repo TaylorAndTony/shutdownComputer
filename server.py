@@ -62,7 +62,7 @@ def check_dir() -> None:
         print('Directory {} fond'.format('online_devices'))
 
 
-def find_all_online_devices() -> List[str]:
+def find_all_online_devices() -> list:
     """
     go through all json files in the folder ./online_devices
     to find all online clients' ip
