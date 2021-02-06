@@ -1,4 +1,4 @@
-online_devices/*
-server_logged_devices/*
-img/*
-测试用记录/*
+Server/online_devices/*
+Server/server_logged_devices/*
+Other/测试用记录/*
+Distribute/*
