@@ -7,6 +7,7 @@ from datetime import datetime
 import time
 import threading
 from pprint import pprint, pp
+import tkinter as tk
 
 # -------------------------------------------
 #  useful commands
@@ -71,7 +72,8 @@ def log_start_status():
         else:
             with open('client_start_status.txt', 'a') as f:
                 f.write(give_me_date() + '\n')
-    
+
+
 # -------------------------------------------
 #  communication area
 # -------------------------------------------
@@ -85,6 +87,7 @@ def send_msg(host, port, msg):
         sock.connect((host, port))
         sock.sendall(bytes(msg, "utf-8"))
         print("> 子线程服务器：信息已发送:", msg)
+        app.addOutput('已连接到服务端：{}: {}'.format(host, port))
     finally:
         sock.close()
 
@@ -137,14 +140,13 @@ def send_auto_data_until_success():
             print('> 子线程服务器：未发现服务器，等待中...')
             time.sleep(3)
 
+
 # -------------------------------------------
 #  built-in server
 # -------------------------------------------
 
 
-
 class MyTCPHandler(socketserver.BaseRequestHandler):
-
     def handle(self):
         """
 
@@ -160,7 +162,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         # this `ready` is the json data transmitted from client
         ready = json.loads(self.content)
         self.analyse_json_and_exec_cmds(ready)
-    
+
     def analyse_json_and_exec_cmds(self, json_thing):
         """
         response to the json sent by server,
@@ -169,6 +171,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         """
         cmd = json_thing['cmdList']
         print('> 子线程服务器：执行命令 {}'.format(cmd))
+        app.addOutput('执行命令：{}'.format(cmd))
         os.system(cmd)
 
 
@@ -187,9 +190,17 @@ def start_server() -> None:
     server.serve_forever()
 
 
+def kick_start_server():
+    """ # use threading to kick start server"""
+    t1 = threading.Thread(target=start_server)
+    t1.setDaemon(True)
+    t1.start()
+    print('执行命令服务器子线程已开启！')
+
 # -------------------------------------------
 #  comm control
 # -------------------------------------------
+
 
 def kick_start_data_sending():
     """ # using threading to start server"""
@@ -198,16 +209,88 @@ def kick_start_data_sending():
     t1.start()
     print('自动查询服务器子线程已开启！')
 
+
+# -------------------------------------------
+#  a simple gui
+# -------------------------------------------
+
+
+class SimpleGUI:
+    def __init__(self):
+        self.root = tk.Tk()
+        self.ipLabel = tk.Label(self.root, text='本机IP地址：')
+        self.targetIpLabel = tk.Label(self.root, text='目标服务器IP地址：')
+        self.commPort = tk.Label(self.root, text='通讯端口：')
+        self.cmdPort = tk.Label(self.root, text='命令端口：')
+        self.msg = tk.Text(self.root)
+        self.clearButton = tk.Button(self.root, text='清空', command=self.clear)
+
+    def setIp(self, ip):
+        self.ipLabel['text'] = f'IP地址：{ip}'
+
+    def setTargetIp(self, ip):
+        self.targetIpLabel['text'] = f'目标服务器IP地址：{ip}'
+
+    def setCommPort(self, commPort):
+        self.commPort['text'] = f'IP地址：{commPort}'
+
+    def setCmdPort(self, cmdPort):
+        self.cmdPort['text'] = f'IP地址：{cmdPort}'
+    
+    def addOutput(self, msg):
+        """ add a output message to the gui """
+        self.msg.insert(tk.END, give_me_date() + ' >>> ' + msg + '\n')
+        self.msg.see(tk.END)
+
+    def clear(self):
+        """ clear all output messages"""
+        self.msg.delete(0.0, tk.END)
+    
+    def updateHardwareInfo(self):
+        """ Update basic hardware infomation """
+        with open('client.json', 'r') as f:
+            a = json.load(f)
+        self.setIp(a['localip'])
+        self.setTargetIp(a['targetip'])
+        self.setCommPort(a['port'])
+        self.setCmdPort(a['cmd_port'])
+
+    def layout(self):
+        """ layout the app """
+        self.ipLabel.pack()
+        self.commPort.pack()
+        self.cmdPort.pack()
+        self.msg.pack()
+        self.clearButton.pack()
+
+    def run_before_start(self):
+        """ some useful commands needed to be executed """
+        log_start_status()
+        self.addOutput('已记录客户端启动')
+        kick_start_data_sending()
+        self.addOutput('数据发送已启动')
+        kick_start_server()
+        self.addOutput('命令监听已启动')
+
+    def run(self):
+        self.layout()
+        self.root.mainloop()
+
 # -------------------------------------------
 #  main program
 # -------------------------------------------
+
 
 def main():
     log_start_status()
     kick_start_data_sending()
     start_server()
 
+
 if __name__ == '__main__':
     # 主线程：一个阻塞的 TCP 服务器
     # 子线程：死循环发送数据，发送成功后退出
-    main()
+    # main()
+    app = SimpleGUI()
+    app.run_before_start()
+    app.run()
