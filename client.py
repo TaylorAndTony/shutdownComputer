@@ -79,12 +79,12 @@ def log_start_status():
 
 def send_msg(host, port, msg):
     """基本通讯"""
-    print('尝试连接', host, ':', port)
+    print('> 子线程服务器：尝试连接', host, ':', port)
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         sock.connect((host, port))
         sock.sendall(bytes(msg, "utf-8"))
-        print("信息已发送:", msg)
+        print("> 子线程服务器：信息已发送:", msg)
     finally:
         sock.close()
 
@@ -134,7 +134,7 @@ def send_auto_data_until_success():
             send_json(ip, port, data)
             connected = True
         except ConnectionRefusedError:
-            print('> 主动模式：未发现服务器，等待中...')
+            print('> 子线程服务器：未发现服务器，等待中...')
             time.sleep(3)
 
 # -------------------------------------------
@@ -153,7 +153,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         self.data = self.request.recv(1024).strip()
         # ip
         self.come_ip = self.client_address[0]
-        print("> 内置服务器：{} 希望向此客户端发送数据".format(self.come_ip))
+        print("> 子线程服务器：{} 希望向此客户端发送数据".format(self.come_ip))
         # decoded receved msg
         self.content = str(self.data, 'utf-8')
         self.content = self.content.replace("'", '"')
@@ -168,7 +168,7 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         the commands one by one in it.
         """
         cmd = json_thing['cmdList']
-        print('> 内置服务器：执行命令 {}'.format(cmd))
+        print('> 子线程服务器：执行命令 {}'.format(cmd))
         os.system(cmd)
 
 
