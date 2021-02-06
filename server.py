@@ -4,11 +4,10 @@ import socket
 import socketserver
 import threading
 import time
+import shutil
 from pprint import pp, pprint
 from tkinter import *
 from tkinter import messagebox, ttk
-
-import pyperclip
 
 # -------------------------------------------
 #  sending message to another client
@@ -149,7 +148,10 @@ def start_server() -> None:
     if you directly call this function,
     the current thread will be blocked
     """
-    os.system('del online_devices\*')
+    shutil.rmtree('online_devices')
+    time.sleep(0.2)
+    os.mkdir('online_devices')
+    print('原有记录已删除')
     with open('server.json', 'r') as f:
         a = json.load(f)
     PORT = a['port']
@@ -288,7 +290,6 @@ class GUI:
 
     def multi_thread_start_server(self):
         check_dir()
-        messagebox.showinfo('开启服务器', '即将开启内置服务器，将清空连接记录。请在命令行内确认删除')
         t = threading.Thread(target=start_server)
         t.setDaemon(True)
         t.start()
