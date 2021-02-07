@@ -258,7 +258,7 @@ class UI:
         self.insertMessage(None, '命令监听已启动')
 
     def run(self):
-        self.window.show()
+        # self.window.show()
         self.app.exec_()
 
 
