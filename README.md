@@ -24,3 +24,7 @@ a tool for shutting down PCs
 notice:
 - `read txt ip` can read `manual_set_ip.txt`, and set all ip into it.
 - `read all ip in current folder` can dump all existed json files into `manual_set_ip.txt`, then hit `read txt ip` again.
+
+## detailed usage:
+
+see `配置文件说明.md` in Client and Server folder
