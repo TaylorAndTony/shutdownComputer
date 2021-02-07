@@ -184,7 +184,8 @@ def start_server() -> None:
     with open('client.json', 'r') as f:
         a = json.load(f)
     PORT = a['cmd_port']
-    IP = a['localip']
+    # 自动实现是否读取IP还是自动获取IP
+    IP = a['localip'] if not a['autoLocalIP'] else acquire_ip()
     server = socketserver.TCPServer((IP, PORT), MyTCPHandler)
     print('监听服务端发送命令的子服务器已启动：', IP, PORT)
     server.serve_forever()

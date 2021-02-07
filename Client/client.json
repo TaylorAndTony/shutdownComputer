@@ -1,4 +1,5 @@
 {
+	"autoLocalIP": false,
 	"localip": "localhost",
 	"targetip": "localhost",
 	"port": 9999,
