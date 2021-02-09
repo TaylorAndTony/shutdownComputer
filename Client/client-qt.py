@@ -82,16 +82,12 @@ def send_msg(host, port, msg):
     """基本通讯"""
     print('> 子线程服务器：尝试连接', host, ':', port)
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        sock.connect((host, port))
-        sock.sendall(bytes(msg, "utf-8"))
-        print("> 子线程服务器：信息已发送:", msg)
-        update_info_into_qt_gui('已连接到服务端：{}: {}'.format(host, port))
-    except Exception as e:
-        update_info_into_qt_gui('出现异常：{}'.format(e))
-    finally:
-        sock.close()
-        update_info_into_qt_gui('> 子线程服务器：退出连接，仅保留服务器命令监听端口'.format(e))
+    sock.connect((host, port))
+    sock.sendall(bytes(msg, "utf-8"))
+    print("> 子线程服务器：信息已发送:", msg)
+    update_info_into_qt_gui('已连接到服务端：{}: {}'.format(host, port))
+    update_info_into_qt_gui('> 子线程服务器：退出连接，仅保留服务器命令监听端口')
+    sock.close()
 
 
 def send_json(host: str, port: int, dict_data: dict):
@@ -172,9 +168,13 @@ class MyTCPHandler(socketserver.BaseRequestHandler):
         the commands one by one in it.
         """
         cmd = json_thing['cmdList']
-        print('> 子线程服务器：执行命令 {}'.format(cmd))
-        update_info_into_qt_gui('执行命令：{}'.format(cmd))
-        os.system(cmd)
+        if cmd == '@r':
+            update_info_into_qt_gui('> 收到重启服务器命令')
+            kick_start_server()
+        else:
+            print('> 子线程服务器：执行命令 {}'.format(cmd))
+            update_info_into_qt_gui('执行命令：{}'.format(cmd))
+            os.system(cmd)
 
 
 def start_server() -> None:
