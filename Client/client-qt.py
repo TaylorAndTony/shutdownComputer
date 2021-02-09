@@ -87,8 +87,11 @@ def send_msg(host, port, msg):
         sock.sendall(bytes(msg, "utf-8"))
         print("> 子线程服务器：信息已发送:", msg)
         update_info_into_qt_gui('已连接到服务端：{}: {}'.format(host, port))
+    except Exception as e:
+        update_info_into_qt_gui('出现异常：{}'.format(e))
     finally:
         sock.close()
+        update_info_into_qt_gui('> 子线程服务器：退出连接，仅保留服务器命令监听端口'.format(e))
 
 
 def send_json(host: str, port: int, dict_data: dict):
@@ -277,9 +280,6 @@ def main():
 
 
 if __name__ == '__main__':
-    # 主线程：一个阻塞的 TCP 服务器
-    # 子线程：死循环发送数据，发送成功后退出
-    # main()
     ui = UI()
     ui.before_run()
     ui.run()
