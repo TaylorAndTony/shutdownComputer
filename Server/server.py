@@ -142,20 +142,57 @@ def check_dir() -> None:
         print('Directory {} fond'.format('online_devices'))
 
 
+def new_a_folder_in_awesome_way(folderName):
+    """
+    由于windows的文件夹新建过于神奇
+    使用此函数进行新建文件夹
+    """
+    for _ in range(3):
+        try:
+            os.mkdir(folderName)
+        except FileExistsError:
+            pass
+        except Exception as e:
+            print(f'文件夹新建异常：目标文件夹 {folderName}\n\t抛出 {e}')
+            break
+        finally:
+            # sleep a while to avoid stupid windows things
+            time.sleep(0.2)
+
 def start_server() -> None:
     """
     # The most *Basic* function to start a server
     if you directly call this function,
     the current thread will be blocked
+    but new a folder under windows seems to be unstable
     """
+    # back up connection data
+    # first delete last backup folder, 
+    # new it first to avoid stupid windows
+    new_a_folder_in_awesome_way('online_devices_backup')
+    shutil.rmtree('online_devices_backup')
+    # then new the folder
+    new_a_folder_in_awesome_way('online_devices_backup')
+    # and then backup those files
+    try:
+        shutil.copytree('online_devices', 'online_devices_backup')
+    except FileExistsError:
+        print('文件夹已检测到')
+    print('上次客户端连接数据已备份至 online_devices_backup 文件夹')
+    # delete original data, 
+    time.sleep(0.3)
+    # delete original log folder
     shutil.rmtree('online_devices')
     time.sleep(0.2)
-    os.mkdir('online_devices')
+    # then new it 
+    new_a_folder_in_awesome_way('online_devices')
     print('原有记录已删除')
+    # load profiles
     with open('server.json', 'r') as f:
         a = json.load(f)
     PORT = a['port']
     IP = a['ip']
+    # start server
     server = socketserver.TCPServer((IP, PORT), MyTCPHandler)
     print('内置服务器已启动：', IP, PORT)
     server.serve_forever()
@@ -296,7 +333,10 @@ class GUI:
         self.server_has_started_text.set('内置服务器已开启')
 
     def button_kick_start_server(self):
-        self.multi_thread_start_server()
+        decision = messagebox.askokcancel('注意', '开启服务器将清空连接记录，并备份至备份文件夹。\n在客户端初次连接成功后，可不开启服务器直接点击刷新按钮。\n是否开启服务器？')
+        if decision:
+            self.multi_thread_start_server()
+
 
     def button_refresh_list(self):
         # 删除内容：
