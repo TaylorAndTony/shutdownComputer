@@ -306,12 +306,15 @@ class GUI:
         """
         当列表某一项被点击时的回调函数，自动处理偶数次点击
         """
-        selection = self.tree.selection()[0]
-        hexx = str(selection[1:])
-        num = int(hexx, 16)
-        self.selected_client_index[num] = self.selected_client_index.get(
-            num, 0) + 1
-        self.tree_process_selected()
+        try:
+            selection = self.tree.selection()[0]
+            hexx = str(selection[1:])
+            num = int(hexx, 16)
+            self.selected_client_index[num] = self.selected_client_index.get(
+                num, 0) + 1
+            self.tree_process_selected()
+        except IndexError:
+            print('点击位置没有客户端记录')
 
     def tree_process_selected(self):
         """
@@ -377,6 +380,9 @@ class GUI:
             )
             print('\n\n发送失败的连接：')
             pp(self.failed)
+            print('已写入 failed.txt')
+            with open('failed.txt', 'w') as f:
+                f.write('\n'.join(self.failed))
 
     def button_read_ip(self):
         with open('manual_set_ip.txt', 'r', encoding='utf-8') as f:
